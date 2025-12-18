@@ -1,0 +1,512 @@
+<!doctype html>
+
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>週末予定メーカー（MVP）</title>
+  <meta name="description" content="登録不要。次の土日の予定を30秒で決める。" />
+  <style>
+    :root{
+      --bg:#0b0d12; --card:#121625; --card2:#0f1320; --text:#e9ecf2; --muted:#a6adbb;
+      --line:#232a3d; --accent:#7aa2ff; --good:#67e8a7; --warn:#ffd37a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --r:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+      background: radial-gradient(1200px 700px at 30% 10%, rgba(122,162,255,.22), transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(103,232,167,.14), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    a{color:inherit}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px 16px 64px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,rgba(122,162,255,.9),rgba(103,232,167,.85));box-shadow:var(--shadow)}
+    h1{font-size:18px;margin:0}
+    .sub{color:var(--muted);font-size:13px;margin:4px 0 0}.grid{display:grid;grid-template-columns: 1.05fr .95fr;gap:14px;margin-top:14px}
+@media (max-width: 940px){.grid{grid-template-columns:1fr;}}
+
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.panel .hd{padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.panel .bd{padding:16px}
+
+.question{font-size:20px;line-height:1.2;margin:0 0 8px}
+.hint{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
+
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pill{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.02);color:var(--muted);font-size:12px}
+.pill strong{color:var(--text)}
+
+.card{
+  position:relative;
+  background: linear-gradient(180deg, rgba(122,162,255,.12), rgba(255,255,255,.02));
+  border: 1px solid rgba(122,162,255,.25);
+  border-radius: 16px;
+  padding: 14px;
+  overflow:hidden;
+}
+.card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.date{font-size:14px;color:var(--muted)}
+.title{font-size:18px;margin:4px 0 0}
+.badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.15);color:var(--muted)}
+
+form{display:grid;gap:10px;margin-top:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width: 520px){.row{grid-template-columns:1fr}}
+
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+input, select, textarea{
+  width:100%; padding:11px 12px; border-radius:12px; border:1px solid var(--line);
+  background: rgba(15,19,32,.85); color: var(--text);
+  outline:none;
+}
+textarea{min-height:72px;resize:vertical}
+input::placeholder, textarea::placeholder{color:#7f8798}
+input:focus, select:focus, textarea:focus{border-color: rgba(122,162,255,.65); box-shadow:0 0 0 3px rgba(122,162,255,.18)}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+button{
+  border:1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button.primary{background: linear-gradient(135deg, rgba(122,162,255,.95), rgba(103,232,167,.85)); border-color: transparent; color:#0b0d12}
+button:active{transform: translateY(1px)}
+.danger{border-color: rgba(255,122,122,.35); color:#ffb4b4}
+
+.cal{display:grid;gap:10px}
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.calhead h2{font-size:14px;margin:0;color:var(--muted);font-weight:600}
+.small{font-size:12px;color:var(--muted)}
+
+.months{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width: 940px){.months{grid-template-columns:1fr}}
+
+.month{background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.month .mh{display:flex;align-items:center;justify-content:space-between;padding:12px 12px;border-bottom:1px solid var(--line)}
+.month .mh .mname{font-weight:700}
+.dow{display:grid;grid-template-columns:repeat(7,1fr);gap:0;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.dow div{padding:8px 6px;text-align:center;color:var(--muted);font-size:12px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.day{
+  position:relative; min-height:56px;
+  border-right:1px solid rgba(35,42,61,.55);
+  border-bottom:1px solid rgba(35,42,61,.55);
+  padding:6px;
+}
+.day:nth-child(7n){border-right:none}
+.day .num{font-size:12px;color:var(--muted)}
+.day.off{background:rgba(0,0,0,.08)}
+.day.today{outline:2px solid rgba(122,162,255,.55); outline-offset:-2px}
+
+.sticky{
+  position:absolute; left:6px; right:6px; bottom:6px;
+  border-radius:12px; padding:8px 8px;
+  background: linear-gradient(180deg, rgba(255,211,122,.20), rgba(255,211,122,.10));
+  border:1px solid rgba(255,211,122,.35);
+  box-shadow: 0 14px 22px rgba(0,0,0,.28);
+  transform-origin: top center;
+}
+.sticky .s-title{font-size:12px;font-weight:800;line-height:1.2}
+.sticky .s-meta{font-size:11px;color:var(--muted);margin-top:4px}
+
+.anim-in{animation: popIn 520ms cubic-bezier(.2,.9,.25,1) both}
+@keyframes popIn{
+  0%{transform: translateY(-14px) scale(.92) rotate(-2deg); opacity:0}
+  100%{transform: translateY(0) scale(1) rotate(0deg); opacity:1}
+}
+
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(15,19,32,.92);box-shadow:var(--shadow);color:var(--text);font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s}
+.toast.show{opacity:1}
+
+footer{margin-top:22px;color:var(--muted);font-size:12px}
+code.kbd{padding:2px 6px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.03)}
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>週末予定メーカー（MVP）</h1>
+          <p class="sub">登録不要。次の土日を30秒で“事故らせない”。</p>
+        </div>
+      </div>
+      <div class="pill">保存: <strong>このブラウザ</strong>（localStorage）</div>
+    </header><div class="grid">
+  <section class="panel" aria-label="入力">
+    <div class="hd">
+      <p class="question" id="q">次の予定、決まってますか？</p>
+      <p class="hint">次の土日（<span id="nextRange"></span>）のカードに、<strong>予定 / 時間 / 予算</strong>だけ入れて確定。下のカレンダーに付箋が貼られます。</p>
+      <div class="pillrow" id="statusRow"></div>
+    </div>
+    <div class="bd">
+      <div class="card" id="planCard">
+        <div class="top">
+          <div>
+            <div class="date" id="cardDate">—</div>
+            <div class="title">次の土日の予定</div>
+          </div>
+          <div class="badge" id="cardBadge">未登録</div>
+        </div>
+
+        <form id="planForm">
+          <div>
+            <label for="title">予定（ざっくりでOK）</label>
+            <input id="title" name="title" placeholder="例：散歩、銭湯、作業、友達とごはん" maxlength="60" />
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="duration">時間</label>
+              <select id="duration" name="duration">
+                <option value="">選択（任意）</option>
+                <option>30分以内</option>
+                <option>1〜2時間</option>
+                <option>3〜4時間</option>
+                <option>半日</option>
+                <option>ほぼ1日</option>
+              </select>
+            </div>
+            <div>
+              <label for="budget">予算</label>
+              <select id="budget" name="budget">
+                <option value="">選択（任意）</option>
+                <option>0円</option>
+                <option>〜1,000円</option>
+                <option>〜3,000円</option>
+                <option>〜5,000円</option>
+                <option>〜10,000円</option>
+                <option>それ以上</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="note">メモ（任意）</label>
+            <textarea id="note" name="note" placeholder="例：雨なら家で。移動は電車。帰りにスーパー。" maxlength="240"></textarea>
+          </div>
+
+          <div class="actions">
+            <button class="primary" type="submit">確定して付箋を貼る</button>
+            <button type="button" id="exportIcs">Googleカレンダーに追加（.ics）</button>
+            <button type="button" class="danger" id="clear">この週末の予定を消す</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel" aria-label="カレンダー">
+    <div class="hd">
+      <div class="calhead">
+        <h2>カレンダー（付箋）</h2>
+        <div class="small">※表示はローカル保存のみ</div>
+      </div>
+    </div>
+    <div class="bd">
+      <div class="months" id="months"></div>
+      <footer>
+        使い方：まずは<strong>1つだけ</strong>予定を入れてOK。<code class="kbd">土日</code>が空のときに開けば、それだけで勝ち。
+      </footer>
+    </div>
+  </aside>
+</div>
+
+  </div>  <div class="toast" id="toast" role="status" aria-live="polite"></div>  <script>
+    // ====== Helpers (JST) ======
+    const fmtYMD = (d) => {
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,'0');
+      const da=String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${da}`;
+    };
+
+    const fmtJP = (d) => {
+      const y=d.getFullYear();
+      const m=d.getMonth()+1;
+      const da=d.getDate();
+      const w=['日','月','火','水','木','金','土'][d.getDay()];
+      return `${y}年${m}月${da}日（${w}）`;
+    };
+
+    const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    // Next weekend: Saturday & Sunday (JST local)
+    function getNextWeekendRange(now=new Date()){
+      const d = startOfDay(now);
+      const day = d.getDay(); // 0 Sun ... 6 Sat
+      // find next Saturday (including today if Sat)
+      const diffToSat = (6 - day + 7) % 7;
+      const sat = new Date(d);
+      sat.setDate(d.getDate() + diffToSat);
+      const sun = new Date(sat);
+      sun.setDate(sat.getDate() + 1);
+      return {sat, sun};
+    }
+
+    function monthGrid(year, monthIndex){
+      // monthIndex: 0-11
+      const first = new Date(year, monthIndex, 1);
+      const last = new Date(year, monthIndex+1, 0);
+      const start = new Date(first);
+      start.setDate(1 - first.getDay());
+      const weeks = [];
+      let cur = new Date(start);
+      for(let i=0;i<42;i++){
+        weeks.push(new Date(cur));
+        cur.setDate(cur.getDate()+1);
+      }
+      return {first, last, days: weeks};
+    }
+
+    // ====== Storage ======
+    const STORAGE_KEY = 'weekend-planner-v1';
+    const load = () => {
+      try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+      catch{ return {}; }
+    };
+    const save = (obj) => localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+
+    // ====== State ======
+    const state = load();
+
+    const els = {
+      nextRange: document.getElementById('nextRange'),
+      cardDate: document.getElementById('cardDate'),
+      badge: document.getElementById('cardBadge'),
+      statusRow: document.getElementById('statusRow'),
+      months: document.getElementById('months'),
+      form: document.getElementById('planForm'),
+      title: document.getElementById('title'),
+      duration: document.getElementById('duration'),
+      budget: document.getElementById('budget'),
+      note: document.getElementById('note'),
+      clear: document.getElementById('clear'),
+      exportIcs: document.getElementById('exportIcs'),
+      toast: document.getElementById('toast'),
+    };
+
+    function toast(msg){
+      els.toast.textContent = msg;
+      els.toast.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=>els.toast.classList.remove('show'), 1600);
+    }
+
+    // ====== Weekend target ======
+    const {sat, sun} = getNextWeekendRange(new Date());
+    const weekendKey = `${fmtYMD(sat)}_${fmtYMD(sun)}`;
+
+    // initialize
+    els.nextRange.textContent = `${fmtJP(sat)} 〜 ${fmtJP(sun)}`;
+    els.cardDate.textContent = `対象：${fmtJP(sat)} / ${fmtJP(sun)}`;
+
+    // ====== Render status pills ======
+    function renderStatus(){
+      const plan = state[weekendKey];
+      const pills = [];
+      const isEmpty = !plan;
+      if(isEmpty){
+        pills.push({txt:`今週末（${sat.getMonth()+1}/${sat.getDate()}-${sun.getMonth()+1}/${sun.getDate()}）はまだ予定0件です`, tone:'warn'});
+        pills.push({txt:'30秒で1つだけ入れよう', tone:'muted'});
+      } else {
+        pills.push({txt:'この週末は予定1件あり', tone:'good'});
+        if(plan.budget) pills.push({txt:`予算: ${plan.budget}`, tone:'muted'});
+        if(plan.duration) pills.push({txt:`時間: ${plan.duration}`, tone:'muted'});
+      }
+      els.statusRow.innerHTML = '';
+      for(const p of pills){
+        const div=document.createElement('div');
+        div.className='pill';
+        if(p.tone==='good') div.style.borderColor='rgba(103,232,167,.35)';
+        if(p.tone==='warn') div.style.borderColor='rgba(255,211,122,.35)';
+        div.textContent=p.txt;
+        els.statusRow.appendChild(div);
+      }
+      els.badge.textContent = isEmpty ? '未登録' : '登録済み';
+      els.badge.style.borderColor = isEmpty ? 'rgba(255,211,122,.35)' : 'rgba(103,232,167,.35)';
+    }
+
+    // ====== Prefill form ======
+    function prefill(){
+      const plan = state[weekendKey];
+      if(!plan) return;
+      els.title.value = plan.title || '';
+      els.duration.value = plan.duration || '';
+      els.budget.value = plan.budget || '';
+      els.note.value = plan.note || '';
+    }
+
+    // ====== Calendar render (current + next month) ======
+    function renderCalendar(){
+      els.months.innerHTML = '';
+      const today = startOfDay(new Date());
+      const monthsToShow = [
+        {y: today.getFullYear(), m: today.getMonth()},
+        {y: new Date(today.getFullYear(), today.getMonth()+1, 1).getFullYear(), m: new Date(today.getFullYear(), today.getMonth()+1, 1).getMonth()},
+      ];
+
+      for(const mm of monthsToShow){
+        const grid = monthGrid(mm.y, mm.m);
+        const monthEl = document.createElement('div');
+        monthEl.className='month';
+
+        const mh=document.createElement('div');
+        mh.className='mh';
+        const mname=document.createElement('div');
+        mname.className='mname';
+        mname.textContent = `${mm.y}年 ${mm.m+1}月`;
+        const msub=document.createElement('div');
+        msub.className='small';
+        msub.textContent = '付箋は土日に貼られます';
+        mh.appendChild(mname); mh.appendChild(msub);
+
+        const dow=document.createElement('div');
+        dow.className='dow';
+        for(const w of ['日','月','火','水','木','金','土']){
+          const d=document.createElement('div'); d.textContent=w; dow.appendChild(d);
+        }
+
+        const days=document.createElement('div');
+        days.className='days';
+
+        for(const d of grid.days){
+          const cell=document.createElement('div');
+          cell.className='day';
+          if(d.getMonth()!==mm.m) cell.style.opacity='.38';
+          const isWeekend = (d.getDay()===0 || d.getDay()===6);
+          if(isWeekend) cell.classList.add('off');
+          if(fmtYMD(d)===fmtYMD(today)) cell.classList.add('today');
+
+          const num=document.createElement('div');
+          num.className='num';
+          num.textContent = d.getDate();
+          cell.appendChild(num);
+
+          // Sticky for next weekend dates
+          const plan = state[weekendKey];
+          if(plan && (fmtYMD(d)===fmtYMD(sat) || fmtYMD(d)===fmtYMD(sun))){
+            const st=document.createElement('div');
+            st.className='sticky anim-in';
+            const t=document.createElement('div');
+            t.className='s-title';
+            t.textContent = plan.title || '（予定）';
+            const meta=document.createElement('div');
+            meta.className='s-meta';
+            meta.textContent = [plan.duration, plan.budget].filter(Boolean).join(' / ') || '—';
+            st.appendChild(t); st.appendChild(meta);
+            cell.appendChild(st);
+          }
+
+          days.appendChild(cell);
+        }
+
+        monthEl.appendChild(mh);
+        monthEl.appendChild(dow);
+        monthEl.appendChild(days);
+        els.months.appendChild(monthEl);
+      }
+    }
+
+    // ====== ICS export (no auth; works with Google Calendar import) ======
+    function makeIcs(plan){
+      // All-day event across Sat/Sun as a single event (Sat start, Mon end)
+      const dtStart = fmtYMD(sat).replaceAll('-','');
+      const dtEnd = fmtYMD(new Date(sun.getFullYear(), sun.getMonth(), sun.getDate()+1)).replaceAll('-',''); // next day
+      const uid = `weekend-${weekendKey}@local`;
+      const summary = (plan.title || '週末の予定').replace(/[\n\r]/g,' ');
+      const descParts = [];
+      if(plan.duration) descParts.push(`時間: ${plan.duration}`);
+      if(plan.budget) descParts.push(`予算: ${plan.budget}`);
+      if(plan.note) descParts.push(`メモ: ${plan.note}`);
+      const description = descParts.join('\\n');
+
+      const now = new Date();
+      const dtStamp = `${now.getUTCFullYear()}${String(now.getUTCMonth()+1).padStart(2,'0')}${String(now.getUTCDate()).padStart(2,'0')}T${String(now.getUTCHours()).padStart(2,'0')}${String(now.getUTCMinutes()).padStart(2,'0')}${String(now.getUTCSeconds()).padStart(2,'0')}Z`;
+
+      return [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Weekend Planner MVP//JP',
+        'CALSCALE:GREGORIAN',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `DTSTART;VALUE=DATE:${dtStart}`,
+        `DTEND;VALUE=DATE:${dtEnd}`,
+        `SUMMARY:${summary}`,
+        description ? `DESCRIPTION:${description}` : '',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].filter(Boolean).join('\r\n');
+    }
+
+    function download(filename, text){
+      const blob = new Blob([text], {type:'text/calendar;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href=url;
+      a.download=filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // ====== Events ======
+    els.form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const title = els.title.value.trim();
+      if(!title){
+        toast('予定だけは入れて！');
+        els.title.focus();
+        return;
+      }
+      state[weekendKey] = {
+        title,
+        duration: els.duration.value || '',
+        budget: els.budget.value || '',
+        note: els.note.value.trim() || '',
+        savedAt: Date.now()
+      };
+      save(state);
+      renderStatus();
+      renderCalendar();
+      toast('付箋を貼りました');
+    });
+
+    els.clear.addEventListener('click', ()=>{
+      if(!state[weekendKey]){ toast('まだ何も入ってないよ'); return; }
+      delete state[weekendKey];
+      save(state);
+      els.form.reset();
+      renderStatus();
+      renderCalendar();
+      toast('消しました');
+    });
+
+    els.exportIcs.addEventListener('click', ()=>{
+      const plan = state[weekendKey];
+      if(!plan){ toast('まず予定を確定してから！'); return; }
+      const ics = makeIcs(plan);
+      download(`weekend_${fmtYMD(sat)}.ics`, ics);
+      toast('.ics をダウンロードしました');
+    });
+
+    // ====== Boot ======
+    renderStatus();
+    prefill();
+    renderCalendar();
+  </script></body>
+</html>
